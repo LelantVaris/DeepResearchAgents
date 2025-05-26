@@ -1,19 +1,24 @@
-# SEO Agents
+# Deep Research Agent
 
-This project contains an AI-powered agent for generating SEO search queries, built with TypeScript and utilizing OpenAI models.
+This project implements an AI-powered Deep Research Agent that autonomously explores a given topic by iteratively generating search queries, fetching web content, evaluating relevance, extracting learnings, and generating follow-up questions to dive deeper. The agent then compiles its findings into a comprehensive Markdown report.
+
+This agent is based on the concepts and structure outlined in the [AI SDK Docs - Deep Research Example](https://aie-feb-25.vercel.app/docs/deep-research).
 
 ## Features
 
-- **SEO Query Finder (`src/index.ts`):** Generates multiple SEO-related search queries (e.g., long-tail keywords) based on an initial prompt.
+- **Recursive Deep Research:** Dynamically explores topics by generating and following up on research questions through multiple levels of depth.
+- **Web Searching with Exa:** Utilizes the Exa API for targeted web searches.
+- **AI-Powered Content Evaluation:** Employs OpenAI models to assess the relevance of search results and avoid processing duplicate information.
+- **Learning Extraction:** Identifies key learnings and generates pertinent follow-up questions from relevant content.
+- **Automated Report Generation:** Synthesizes all accumulated research data into a structured Markdown report (`deep_research_report.md`).
+- **Configurable Research Parameters:** Allows users to define the initial research prompt, depth, and breadth of the investigation.
 
 ## Project Structure
 
 \`\`\`
-SEOAgents/ # (Note: GitHub repo and local folder might still be DeepResearchAgents)
-├── agents/ 
-│   └── query-finder.ts # Original query finder, src/index.ts is now the main script
+DeepResearchAgent/ # (Note: GitHub repo and local folder might still be DeepResearchAgents or SEO Agents)
 ├── src/
-│   └── index.ts      # Main script for the SEO Query Finder
+│   └── index.ts      # Main script for the Deep Research Agent
 ├── .env 
 ├── .env.example
 ├── .gitignore
@@ -22,18 +27,22 @@ SEOAgents/ # (Note: GitHub repo and local folder might still be DeepResearchAgen
 └── README.md
 \`\`\`
 
+(The `agents/` directory might still exist with `query-finder.ts` if not deleted yet.)
+
 ## Prerequisites
 
 - Node.js (v18 or higher recommended)
 - pnpm (or npm/yarn)
-- API key for OpenAI
+- API keys for:
+    - OpenAI (`OPENAI_API_KEY`)
+    - Exa (`EXA_API_KEY`)
 
 ## Setup
 
 1.  **Clone the repository:**
     \`\`\`bash
-    git clone https://github.com/LelantVaris/DeepResearchAgents.git # Or your new repo URL if you rename it on GitHub
-    cd DeepResearchAgents # Or your new local folder name
+    git clone https://github.com/LelantVaris/DeepResearchAgents.git # Or your current repo URL
+    cd DeepResearchAgents # Or your current local folder name
     \`\`\`
 
 2.  **Install dependencies:**
@@ -42,37 +51,67 @@ SEOAgents/ # (Note: GitHub repo and local folder might still be DeepResearchAgen
     \`\`\`
 
 3.  **Set up environment variables:**
-    Copy `.env.example` to `.env` and add your `OPENAI_API_KEY`.
+    Copy `.env.example` to `.env`:
     \`\`\`bash
     cp .env.example .env
     \`\`\`
-    Open `.env`:
+    Open `.env` and add your API keys:
     \`\`\`
     OPENAI_API_KEY=your_openai_api_key
-    EXA_API_KEY= # No longer strictly needed unless you add Exa-based agents back
-    PERPLEXITY_API_KEY= # No longer strictly needed
+    EXA_API_KEY=your_exa_api_key
+    PERPLEXITY_API_KEY= # This key is no longer used by the core agent
     \`\`\`
 
 ## Running the Agent
 
-The main SEO Query Finder script is `src/index.ts`.
+The main Deep Research Agent script is `src/index.ts`.
 
-1.  Modify the `prompt` variable within the `main` function in `src/index.ts` to your desired SEO topic or base keywords.
+1.  **Configure the Research Task in `src/index.ts`:**
+    Open `src/index.ts` and locate the `main` function. Inside, you can configure:
+    *   `initialPrompt`: Set this to the research topic you want to investigate. Several examples are provided; uncomment one or write your own.
+    *   `initialDepthUserSetting`: Defines how many levels deep the research should go (e.g., 2 means the initial query plus two more layers of follow-up).
+    *   `initialBreadth`: Determines how many sub-queries are generated at each research level.
+
+    Example configuration within `main()`:
     \`\`\`typescript
     const main = async () => {
-      // Example prompt for SEO keyword generation
-      const prompt = 'generate long-tail keywords for "eco-friendly pet supplies"'; 
+      // 1. Define the initial research prompt/topic:
+      const initialPrompt = 'What are the latest advancements in quantum computing and their potential impact on cryptography?';
+      // const initialPrompt = 'Evaluate the market viability and key challenges for vertical farming in urban environments.';
+
+      // 2. Define the depth and breadth:
+      initialDepthUserSetting = 2;
+      const initialBreadth = 2;
       // ... rest of the main function
     };
     \`\`\`
-2.  Run the script using the `dev` command (which points to `src/index.ts`):
+
+2.  **Run the script:**
+    The `dev` script in `package.json` points to `src/index.ts`.
     \`\`\`bash
     pnpm dev
     \`\`\`
-    Or directly:
+    Or run directly:
     \`\`\`bash
     pnpm tsx src/index.ts
     \`\`\`
+
+3.  **Output:**
+    *   The agent will log its progress extensively in the console, showing generated queries, search results, evaluations, and learnings.
+    *   Upon completion, a `deep_research_report.md` file will be created in the project root, containing the synthesized findings.
+
+## How it Works
+
+1.  **Initialization:** Takes an `initialPrompt`, `depth`, and `breadth`.
+2.  **Query Generation (`generateSearchQueries`):** Generates `breadth` number of search queries based on the current prompt.
+3.  **Web Search & Processing (`searchAndProcess` via `searchWeb`):**
+    *   For each generated query, it searches the web using Exa (`searchWeb`).
+    *   The results are then evaluated for relevance and uniqueness using an AI model. Relevant results are stored.
+4.  **Learning Extraction (`generateLearnings`):**
+    *   For each relevant search result, key learnings and 1-2 follow-up questions are generated by an AI model.
+5.  **Recursion (`deepResearch`):**
+    *   If follow-up questions are generated and the current `depth` is greater than 0, the `deepResearch` function calls itself with a refined prompt based on the learnings and follow-up questions, decrementing the depth.
+6.  **Report Generation (`generateReport`):** Once all research paths are explored up to the specified depth, all accumulated data (queries, results, learnings) is synthesized into a Markdown report.
 
 ## Contributing
 
